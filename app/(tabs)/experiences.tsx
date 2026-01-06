@@ -11,7 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, Maximize2, Sparkles } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getPerfumes } from '@/lib/api';
 import { Perfume } from '@/types/database';
 
 const { width } = Dimensions.get('window');
@@ -24,13 +25,23 @@ export default function ExperiencesScreen() {
     fetchPerfumes();
   }, []);
 
+  // const fetchPerfumes = async () => {
+  //   const { data } = await supabase
+  //     .from('perfumes')
+  //     .select('*')
+  //     .order('name');
+  //   if (data) setPerfumes(data);
+  // };
+
   const fetchPerfumes = async () => {
-    const { data } = await supabase
-      .from('perfumes')
-      .select('*')
-      .order('name');
-    if (data) setPerfumes(data);
-  };
+  try {
+    const data = await getPerfumes();
+    setPerfumes(data);
+  } catch (error) {
+    console.error('Error fetching perfumes:', error);
+  }
+};
+
 
   return (
     <View style={styles.container}>
@@ -111,10 +122,7 @@ export default function ExperiencesScreen() {
                     <TouchableOpacity
                       style={styles.miniButton}
                       onPress={() =>
-                        router.push({
-                          pathname: '/ar-experience',
-                          params: { perfumeId: perfume.id },
-                        } as any)
+                        router.push(`/ar-experience?perfumeId=${perfume.id}`)
                       }
                     >
                       <Eye size={16} color="#FF6B9D" />
