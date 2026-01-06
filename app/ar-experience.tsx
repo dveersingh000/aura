@@ -10,7 +10,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Eye, Play } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getPerfumeById } from '@/lib/api';
 import { Perfume } from '@/types/database';
 
 export default function ARExperienceScreen() {
@@ -29,17 +30,28 @@ export default function ARExperienceScreen() {
     }
   }, [perfumeId]);
 
-  const fetchPerfume = async () => {
-    const { data } = await supabase
-      .from('perfumes')
-      .select('*')
-      .eq('id', perfumeId)
-      .maybeSingle();
+  // const fetchPerfume = async () => {
+  //   const { data } = await supabase
+  //     .from('perfumes')
+  //     .select('*')
+  //     .eq('id', perfumeId)
+  //     .maybeSingle();
 
-    if (data) {
-      setPerfume(data);
-    }
-  };
+  //   if (data) {
+  //     setPerfume(data);
+  //   }
+  // };
+
+  const fetchPerfume = async () => {
+  try {
+    if (!perfumeId) return;
+    const data = await getPerfumeById(perfumeId as string);
+    setPerfume(data);
+  } catch (error) {
+    console.error('Error fetching perfume:', error);
+  }
+};
+
 
   const startAnimation = () => {
     setIsPlaying(true);

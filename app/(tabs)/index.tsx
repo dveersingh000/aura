@@ -12,7 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Search, Sparkles } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getPerfumes } from '@/lib/api';
 import { Perfume } from '@/types/database';
 
 const { width } = Dimensions.get('window');
@@ -27,21 +28,33 @@ export default function HomeScreen() {
     fetchPerfumes();
   }, []);
 
+  // const fetchPerfumes = async () => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('perfumes')
+  //       .select('*')
+  //       .order('name');
+
+  //     if (error) throw error;
+  //     setPerfumes(data || []);
+  //   } catch (error) {
+  //     console.error('Error fetching perfumes:', error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchPerfumes = async () => {
     try {
-      const { data, error } = await supabase
-        .from('perfumes')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setPerfumes(data || []);
+      const data = await getPerfumes();
+      setPerfumes(data);
     } catch (error) {
       console.error('Error fetching perfumes:', error);
     } finally {
       setLoading(false);
     }
   };
+
 
   const filteredPerfumes = perfumes.filter(
     (perfume) =>
@@ -101,7 +114,7 @@ export default function HomeScreen() {
                   key={perfume.id}
                   style={styles.perfumeCard}
                   activeOpacity={0.9}
-                  onPress={() => {}}
+                  onPress={() => { }}
                 >
                   <View style={styles.imageContainer}>
                     {perfume.image_url && (

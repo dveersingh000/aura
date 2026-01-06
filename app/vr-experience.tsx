@@ -10,7 +10,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Maximize2 } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getPerfumeById } from '@/lib/api';
 import { Perfume } from '@/types/database';
 
 const VR_ENVIRONMENTS = {
@@ -101,17 +102,28 @@ export default function VRExperienceScreen() {
     }
   }, [isImmersed]);
 
-  const fetchPerfume = async () => {
-    const { data } = await supabase
-      .from('perfumes')
-      .select('*')
-      .eq('id', perfumeId)
-      .maybeSingle();
+  // const fetchPerfume = async () => {
+  //   const { data } = await supabase
+  //     .from('perfumes')
+  //     .select('*')
+  //     .eq('id', perfumeId)
+  //     .maybeSingle();
 
-    if (data) {
-      setPerfume(data);
-    }
-  };
+  //   if (data) {
+  //     setPerfume(data);
+  //   }
+  // };
+
+  const fetchPerfume = async () => {
+  try {
+    if (!perfumeId) return;
+    const data = await getPerfumeById(perfumeId as string);
+    setPerfume(data);
+  } catch (error) {
+    console.error('Error fetching perfume (VR):', error);
+  }
+};
+
 
   if (!perfume) {
     return (
