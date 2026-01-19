@@ -11,7 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Award, Eye, Sparkles } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getRecommendations } from '@/lib/api';
 import { Perfume } from '@/types/database';
 import { useJourney } from '@/context/JourneyContext';
 
@@ -31,66 +32,83 @@ export default function RecommendationsScreen() {
     fetchRecommendations();
   }, [mood, persona, selectedNotes]);
 
+  // const fetchRecommendations = async () => {
+  //   try {
+  //     const { data: perfumesByMood } = await supabase
+  //       .from('perfume_moods')
+  //       .select('perfume_id, strength')
+  //       .eq('mood_id', mood!.id)
+  //       .gte('strength', 6);
+
+  //     const { data: perfumesByPersona } = await supabase
+  //       .from('perfume_personas')
+  //       .select('perfume_id, match_score')
+  //       .eq('persona_id', persona!.id)
+  //       .gte('match_score', 7);
+
+  //     const { data: perfumesByNotes } = await supabase
+  //       .from('perfume_notes')
+  //       .select('perfume_id, prominence')
+  //       .in(
+  //         'note_id',
+  //         selectedNotes.map((n) => n.id)
+  //       )
+  //       .gte('prominence', 6);
+
+  //     const moodPerfumeIds = perfumesByMood?.map((p) => p.perfume_id) || [];
+  //     const personaPerfumeIds =
+  //       perfumesByPersona?.map((p) => p.perfume_id) || [];
+  //     const notePerfumeIds = perfumesByNotes?.map((p) => p.perfume_id) || [];
+
+  //     const allIds = [...moodPerfumeIds, ...personaPerfumeIds, ...notePerfumeIds];
+  //     const idCounts: { [key: string]: number } = {};
+  //     allIds.forEach((id) => {
+  //       idCounts[id] = (idCounts[id] || 0) + 1;
+  //     });
+
+  //     const rankedIds = Object.entries(idCounts)
+  //       .sort(([, a], [, b]) => b - a)
+  //       .map(([id]) => id)
+  //       .slice(0, 6);
+
+  //     if (rankedIds.length > 0) {
+  //       const { data: matchedPerfumes } = await supabase
+  //         .from('perfumes')
+  //         .select('*')
+  //         .in('id', rankedIds);
+
+  //       if (matchedPerfumes) {
+  //         const sorted = rankedIds
+  //           .map((id) => matchedPerfumes.find((p) => p.id === id))
+  //           .filter((p): p is Perfume => p !== undefined);
+
+  //         setPerfumes(sorted);
+  //         setRecommendations(sorted);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching recommendations:', error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const fetchRecommendations = async () => {
     try {
-      const { data: perfumesByMood } = await supabase
-        .from('perfume_moods')
-        .select('perfume_id, strength')
-        .eq('mood_id', mood!.id)
-        .gte('strength', 6);
-
-      const { data: perfumesByPersona } = await supabase
-        .from('perfume_personas')
-        .select('perfume_id, match_score')
-        .eq('persona_id', persona!.id)
-        .gte('match_score', 7);
-
-      const { data: perfumesByNotes } = await supabase
-        .from('perfume_notes')
-        .select('perfume_id, prominence')
-        .in(
-          'note_id',
-          selectedNotes.map((n) => n.id)
-        )
-        .gte('prominence', 6);
-
-      const moodPerfumeIds = perfumesByMood?.map((p) => p.perfume_id) || [];
-      const personaPerfumeIds =
-        perfumesByPersona?.map((p) => p.perfume_id) || [];
-      const notePerfumeIds = perfumesByNotes?.map((p) => p.perfume_id) || [];
-
-      const allIds = [...moodPerfumeIds, ...personaPerfumeIds, ...notePerfumeIds];
-      const idCounts: { [key: string]: number } = {};
-      allIds.forEach((id) => {
-        idCounts[id] = (idCounts[id] || 0) + 1;
+      const data = await getRecommendations({
+        moodId: mood!.id,
+        personaId: persona!.id,
+        selectedNoteIds: selectedNotes.map((n) => n.id),
       });
 
-      const rankedIds = Object.entries(idCounts)
-        .sort(([, a], [, b]) => b - a)
-        .map(([id]) => id)
-        .slice(0, 6);
-
-      if (rankedIds.length > 0) {
-        const { data: matchedPerfumes } = await supabase
-          .from('perfumes')
-          .select('*')
-          .in('id', rankedIds);
-
-        if (matchedPerfumes) {
-          const sorted = rankedIds
-            .map((id) => matchedPerfumes.find((p) => p.id === id))
-            .filter((p): p is Perfume => p !== undefined);
-
-          setPerfumes(sorted);
-          setRecommendations(sorted);
-        }
-      }
+      setPerfumes(data);
+      setRecommendations(data);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -151,7 +169,7 @@ export default function RecommendationsScreen() {
                     key={perfume.id}
                     style={styles.perfumeCard}
                     activeOpacity={0.9}
-                    onPress={() => {}}
+                    onPress={() => { }}
                   >
                     <View style={styles.rankBadge}>
                       <Text style={styles.rankText}>#{index + 1}</Text>

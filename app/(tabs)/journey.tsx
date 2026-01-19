@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles, Heart, User, Droplet, Award } from 'lucide-react-native';
@@ -56,6 +56,11 @@ export default function JourneyScreen() {
         colors={['#0A0A0F', '#1A1A2E', '#0A0A0F']}
         style={styles.gradient}
       >
+        <ScrollView
+                  style={styles.scrollView}
+                  contentContainerStyle={styles.scrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
         <View style={styles.header}>
           <Sparkles size={32} color="#FF6B9D" />
           <Text style={styles.title}>Your Fragrance Journey</Text>
@@ -148,6 +153,7 @@ export default function JourneyScreen() {
             );
           })}
         </View>
+        </ScrollView>
       </LinearGradient>
     </View>
   );
@@ -160,6 +166,12 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     paddingTop: 60,

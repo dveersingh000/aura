@@ -9,7 +9,8 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, ArrowRight, Droplet } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getNotes } from '@/lib/api';
 import { ScentNote } from '@/types/database';
 import { useJourney } from '@/context/JourneyContext';
 
@@ -29,12 +30,21 @@ export default function PreferencesScreen() {
     fetchNotes();
   }, [persona]);
 
+  // const fetchNotes = async () => {
+  //   const { data } = await supabase
+  //     .from('scent_notes')
+  //     .select('*')
+  //     .order('category');
+  //   if (data) setAllNotes(data);
+  // };
+
   const fetchNotes = async () => {
-    const { data } = await supabase
-      .from('scent_notes')
-      .select('*')
-      .order('category');
-    if (data) setAllNotes(data);
+    try {
+      const data = await getNotes();
+      setAllNotes(data);
+    } catch (err) {
+      console.error('Failed to load notes', err);
+    }
   };
 
   const toggleNote = (note: ScentNote) => {
