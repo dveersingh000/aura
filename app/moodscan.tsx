@@ -10,7 +10,8 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Sparkles } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+// import { supabase } from '@/lib/supabase';
+import { getMoods, getPersonaByName } from '@/lib/api';
 import { Mood, Persona } from '@/types/database';
 import { useJourney } from '@/context/JourneyContext';
 
@@ -61,10 +62,19 @@ export default function MoodScanScreen() {
     animateIn();
   }, [currentPrompt]);
 
+  // const fetchMoods = async () => {
+  //   const { data } = await supabase.from('moods').select('*');
+  //   if (data) setMoods(data);
+  // };
   const fetchMoods = async () => {
-    const { data } = await supabase.from('moods').select('*');
-    if (data) setMoods(data);
+    try {
+      const data = await getMoods();
+      setMoods(data);
+    } catch (err) {
+      console.error('Failed to load moods', err);
+    }
   };
+
 
   const animateIn = () => {
     fadeAnim.setValue(0);
@@ -108,17 +118,26 @@ export default function MoodScanScreen() {
       Mysterious: 'The Sophisticated',
     };
 
-    const { data: personas } = await supabase
-      .from('personas')
-      .select('*')
-      .eq('name', personaMapping[topMoodName])
-      .maybeSingle();
+    // const { data: personas } = await supabase
+    //   .from('personas')
+    //   .select('*')
+    //   .eq('name', personaMapping[topMoodName])
+    //   .maybeSingle();
 
-    if (personas) {
-      setPersona(personas);
+    // if (personas) {
+    //   setPersona(personas);
+    // }
+
+    // router.push('/persona');
+    try {
+      const persona = await getPersonaByName(
+        personaMapping[topMoodName]
+      );
+      setPersona(persona);
+      router.push('/persona');
+    } catch (err) {
+      console.error('Persona lookup failed', err);
     }
-
-    router.push('/persona');
   };
 
   const prompt = emotionalPrompts[currentPrompt];

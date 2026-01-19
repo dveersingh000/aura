@@ -1,7 +1,6 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// ----------- META DATA -----------
-
+// Meta data
 export async function getMoods() {
   const res = await fetch(`${API_BASE_URL}/moods`);
   if (!res.ok) throw new Error('Failed to fetch moods');
@@ -11,6 +10,12 @@ export async function getMoods() {
 export async function getPersonas() {
   const res = await fetch(`${API_BASE_URL}/personas`);
   if (!res.ok) throw new Error('Failed to fetch personas');
+  return res.json();
+}
+
+export async function getPersonaByName(name: string) {
+  const res = await fetch(`${API_BASE_URL}/personas/by-name/${name}`);
+  if (!res.ok) throw new Error('Persona not found');
   return res.json();
 }
 
