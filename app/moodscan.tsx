@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Sparkles } from 'lucide-react-native';
 // import { supabase } from '@/lib/supabase';
-import { getMoods, getPersonaByName } from '@/lib/api';
+import { getMoods, getPersonaByName, analyzeMood } from '@/lib/api';
 import { Mood, Persona } from '@/types/database';
 import { useJourney } from '@/context/JourneyContext';
 
@@ -50,13 +52,14 @@ export default function MoodScanScreen() {
   const { setMood, setPersona } = useJourney();
   const [currentPrompt, setCurrentPrompt] = useState(0);
   const [moodScores, setMoodScores] = useState<{ [key: string]: number }>({});
-  const [moods, setMoods] = useState<Mood[]>([]);
+  // const [moods, setMoods] = useState<Mood[]>([]);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  useEffect(() => {
-    fetchMoods();
-    animateIn();
-  }, []);
+  // useEffect(() => {
+  //   fetchMoods();
+  //   animateIn();
+  // }, []);
 
   useEffect(() => {
     animateIn();
@@ -66,14 +69,14 @@ export default function MoodScanScreen() {
   //   const { data } = await supabase.from('moods').select('*');
   //   if (data) setMoods(data);
   // };
-  const fetchMoods = async () => {
-    try {
-      const data = await getMoods();
-      setMoods(data);
-    } catch (err) {
-      console.error('Failed to load moods', err);
-    }
-  };
+  // const fetchMoods = async () => {
+  //   try {
+  //     const data = await getMoods();
+  //     setMoods(data);
+  //   } catch (err) {
+  //     console.error('Failed to load moods', err);
+  //   }
+  // };
 
 
   const animateIn = () => {
@@ -86,6 +89,8 @@ export default function MoodScanScreen() {
   };
 
   const handleSelection = async (selectedMoods: string[]) => {
+    if (isAnalyzing) return;
+
     const newScores = { ...moodScores };
     selectedMoods.forEach((moodName) => {
       newScores[moodName] = (newScores[moodName] || 0) + 1;
@@ -95,48 +100,24 @@ export default function MoodScanScreen() {
     if (currentPrompt < emotionalPrompts.length - 1) {
       setCurrentPrompt(currentPrompt + 1);
     } else {
-      await analyzeMood(newScores);
+      await performAnalysis(newScores);
     }
   };
 
-  const analyzeMood = async (scores: { [key: string]: number }) => {
-    const topMoodName = Object.keys(scores).reduce((a, b) =>
-      scores[a] > scores[b] ? a : b
-    );
-
-    const detectedMood = moods.find((m) => m.name === topMoodName);
-    if (!detectedMood) return;
-
-    setMood(detectedMood);
-
-    const personaMapping: { [key: string]: string } = {
-      Calm: 'The Minimalist',
-      Romantic: 'The Romantic',
-      Energetic: 'The Free Spirit',
-      Bold: 'The Bold Visionary',
-      Fresh: 'The Minimalist',
-      Mysterious: 'The Sophisticated',
-    };
-
-    // const { data: personas } = await supabase
-    //   .from('personas')
-    //   .select('*')
-    //   .eq('name', personaMapping[topMoodName])
-    //   .maybeSingle();
-
-    // if (personas) {
-    //   setPersona(personas);
-    // }
-
-    // router.push('/persona');
+  const performAnalysis = async (scores: { [key: string]: number }) => {
+    setIsAnalyzing(true);
     try {
-      const persona = await getPersonaByName(
-        personaMapping[topMoodName]
-      );
-      setPersona(persona);
+      const result = await analyzeMood(scores);
+
+      setMood(result.mood);
+      setPersona(result.persona);
+
       router.push('/persona');
     } catch (err) {
-      console.error('Persona lookup failed', err);
+      console.error('Analysis failed', err);
+      Alert.alert('Error', 'Could not analyze your mood. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -167,42 +148,51 @@ export default function MoodScanScreen() {
             </Text>
           </View>
 
-          <View style={styles.progressContainer}>
-            {emotionalPrompts.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressDot,
-                  index <= currentPrompt && styles.progressDotActive,
-                ]}
-              />
-            ))}
-          </View>
-
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <Text style={styles.question}>{prompt.question}</Text>
-
-            <View style={styles.optionsContainer}>
-              {prompt.options.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.optionButton}
-                  onPress={() => handleSelection(option.moods)}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={['#1A1A2E', '#2A2A3E']}
-                    style={styles.optionGradient}
-                  >
-                    <Text style={styles.optionText}>{option.text}</Text>
-                    <View style={styles.optionIndicator}>
-                      <View style={styles.optionIndicatorInner} />
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))}
+          {isAnalyzing ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#FF6B9D" />
+              <Text style={styles.loadingText}>Analyzing your aura...</Text>
             </View>
-          </Animated.View>
+          ) : (
+            <>
+              <View style={styles.progressContainer}>
+                {emotionalPrompts.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.progressDot,
+                      index <= currentPrompt && styles.progressDotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <Text style={styles.question}>{prompt.question}</Text>
+
+                <View style={styles.optionsContainer}>
+                  {prompt.options.map((option, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.optionButton}
+                      onPress={() => handleSelection(option.moods)}
+                      activeOpacity={0.7}
+                    >
+                      <LinearGradient
+                        colors={['#1A1A2E', '#2A2A3E']}
+                        style={styles.optionGradient}
+                      >
+                        <Text style={styles.optionText}>{option.text}</Text>
+                        <View style={styles.optionIndicator}>
+                          <View style={styles.optionIndicatorInner} />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Animated.View>
+            </>
+          )}
         </ScrollView>
       </LinearGradient>
     </View>
@@ -307,5 +297,14 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: 'transparent',
+  },
+  loadingContainer: {
+    marginTop: 50,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFF',
+    marginTop: 16,
+    fontSize: 16,
   },
 });

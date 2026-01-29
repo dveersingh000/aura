@@ -2,8 +2,10 @@ export interface Perfume {
   id: string;
   name: string;
   brand: string;
+  category: string;
   description: string;
   image_url: string | null;
+  video_url: string | null;
   price: number;
   aura_color: string;
   vr_environment: string;
@@ -20,6 +22,7 @@ export interface Mood {
 }
 
 export interface Persona {
+  image_url: string | null;
   id: string;
   name: string;
   description: string;

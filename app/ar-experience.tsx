@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   Image,
   Animated,
+  ActivityIndicator,
+  LayoutAnimation,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Eye, Play } from 'lucide-react-native';
+import { X, Eye, Play, Pause } from 'lucide-react-native';
+import { Video, ResizeMode } from 'expo-av';
 // import { supabase } from '@/lib/supabase';
 import { getPerfumeById } from '@/lib/api';
 import { Perfume } from '@/types/database';
@@ -19,6 +22,9 @@ export default function ARExperienceScreen() {
   const { perfumeId } = useLocalSearchParams();
   const [perfume, setPerfume] = useState<Perfume | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+
+  const videoRef = useRef<Video>(null);
 
   const pulseAnim = useState(new Animated.Value(1))[0];
   const glowAnim = useState(new Animated.Value(0))[0];
@@ -43,18 +49,31 @@ export default function ARExperienceScreen() {
   // };
 
   const fetchPerfume = async () => {
-  try {
-    if (!perfumeId) return;
-    const data = await getPerfumeById(perfumeId as string);
-    setPerfume(data);
-  } catch (error) {
-    console.error('Error fetching perfume:', error);
-  }
-};
+    try {
+      if (!perfumeId) return;
+      const data = await getPerfumeById(perfumeId as string);
+      setPerfume(data);
+    } catch (error) {
+      console.error('Error fetching perfume:', error);
+    }
+  };
+
+  const toggleExperience = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+    if (isPlaying) {
+      setIsPlaying(false);
+      startRingAnimation();
+    } else {
+      setIsPlaying(true);
+    }
+  };
 
 
-  const startAnimation = () => {
-    setIsPlaying(true);
+  const startRingAnimation = () => {
+    pulseAnim.setValue(1);
+    glowAnim.setValue(0);
+    rotateAnim.setValue(0);
 
     Animated.loop(
       Animated.parallel([
@@ -91,12 +110,16 @@ export default function ARExperienceScreen() {
     ).start();
   };
 
-  const stopAnimation = () => {
-    setIsPlaying(false);
-    pulseAnim.setValue(1);
-    glowAnim.setValue(0);
-    rotateAnim.setValue(0);
-  };
+  useEffect(() => {
+    if (!isPlaying) startRingAnimation();
+  }, [isPlaying]);
+
+  // const stopAnimation = () => {
+  //   setIsPlaying(false);
+  //   pulseAnim.setValue(1);
+  //   glowAnim.setValue(0);
+  //   rotateAnim.setValue(0);
+  // };
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -128,91 +151,118 @@ export default function ARExperienceScreen() {
           <View style={styles.header}>
             <Eye size={32} color={perfume.aura_color} />
             <Text style={styles.title}>Aura Experience</Text>
-            <Text style={styles.subtitle}>
-              Feel the emotional essence of {perfume.name}
-            </Text>
+            {!isPlaying && (
+              <Text style={styles.subtitle}>
+                Feel the emotional essence of {perfume.name}
+              </Text>
+            )}
           </View>
 
           <View style={styles.arContainer}>
-            <View style={styles.perfumeContainer}>
-              {perfume.image_url && (
-                <Image
-                  source={{ uri: perfume.image_url }}
-                  style={styles.perfumeImage}
-                  resizeMode="contain"
-                />
+            <View style={[
+              styles.perfumeContainer,
+              { height: isPlaying ? 420 : 280 }
+            ]}>
+              {isPlaying && perfume.video_url ? (
+                <View style={styles.videoWrapper}>
+                  <Video
+                    ref={videoRef}
+                    style={styles.video}
+                    source={{ uri: perfume.video_url }}
+                    useNativeControls={false}
+                    resizeMode={ResizeMode.CONTAIN}
+                    isLooping
+                    shouldPlay={isPlaying}
+                    isMuted={false}
+                    onLoad={() => setVideoLoaded(true)}
+                    onError={(e) => console.log("Video Error:", e)}
+                  />
+
+                  {!videoLoaded && (
+                    <ActivityIndicator
+                      size="small"
+                      color={perfume.aura_color}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+
+                  <View style={[styles.videoBorder, { borderColor: perfume.aura_color }]} />
+                </View>
+              ) : (
+                <>
+                  {perfume.image_url && (
+                    <Image
+                      source={{ uri: perfume.image_url }}
+                      style={styles.perfumeImage}
+                      resizeMode="cover"
+                    />
+                  )}
+
+
+                  <Animated.View
+                    style={[
+                      styles.auraRing1,
+                      {
+                        borderColor: perfume.aura_color,
+                        transform: [{ scale: pulseAnim }, { rotate: spin }],
+                        opacity: glowAnim,
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.auraRing2,
+                      {
+                        borderColor: perfume.aura_color,
+                        transform: [
+                          { scale: Animated.multiply(pulseAnim, 1.3) },
+                          { rotate: spin },
+                        ],
+                        opacity: Animated.multiply(glowAnim, 0.6),
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.auraRing3,
+                      {
+                        borderColor: perfume.aura_color,
+                        transform: [
+                          { scale: Animated.multiply(pulseAnim, 1.6) },
+                          { rotate: spin },
+                        ],
+                        opacity: Animated.multiply(glowAnim, 0.3),
+                      },
+                    ]}
+                  />
+
+                  <View
+                    style={[
+                      styles.centerGlow,
+                      { backgroundColor: perfume.aura_color },
+                    ]}
+                  />
+                </>
               )}
-
-              <Animated.View
-                style={[
-                  styles.auraRing1,
-                  {
-                    borderColor: perfume.aura_color,
-                    transform: [{ scale: pulseAnim }, { rotate: spin }],
-                    opacity: glowAnim,
-                  },
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.auraRing2,
-                  {
-                    borderColor: perfume.aura_color,
-                    transform: [
-                      { scale: Animated.multiply(pulseAnim, 1.3) },
-                      { rotate: spin },
-                    ],
-                    opacity: Animated.multiply(glowAnim, 0.6),
-                  },
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.auraRing3,
-                  {
-                    borderColor: perfume.aura_color,
-                    transform: [
-                      { scale: Animated.multiply(pulseAnim, 1.6) },
-                      { rotate: spin },
-                    ],
-                    opacity: Animated.multiply(glowAnim, 0.3),
-                  },
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.centerGlow,
-                  { backgroundColor: perfume.aura_color },
-                ]}
-              />
             </View>
           </View>
 
-          <View style={styles.infoContainer}>
-            <Text style={styles.perfumeName}>{perfume.name}</Text>
-            <Text style={styles.perfumeBrand}>{perfume.brand}</Text>
-
-            <View
-              style={[
-                styles.colorBadge,
-                { backgroundColor: perfume.aura_color + '30' },
-              ]}
-            >
-              <Text style={[styles.colorText, { color: perfume.aura_color }]}>
-                Emotional Aura Color
-              </Text>
+          {!isPlaying && (
+            <View style={styles.infoContainer}>
+              <Text style={styles.perfumeName}>{perfume.name}</Text>
+              <Text style={styles.perfumeBrand}>{perfume.brand}</Text>
+              <View style={[styles.colorBadge, { backgroundColor: perfume.aura_color + '30' }]}>
+                <Text style={[styles.colorText, { color: perfume.aura_color }]}>Emotional Aura Color</Text>
+              </View>
+              <Text style={styles.impactDescription}>{perfume.emotional_impact}</Text>
             </View>
-
-            <Text style={styles.impactDescription}>
-              {perfume.emotional_impact}
-            </Text>
-          </View>
+          )}
 
           <TouchableOpacity
-            style={styles.playButton}
-            onPress={isPlaying ? stopAnimation : startAnimation}
+            style={[styles.playButton, !perfume.video_url && { opacity: 0.5 }]}
+            onPress={perfume.video_url ? toggleExperience : undefined}
             activeOpacity={0.8}
+            disabled={!perfume.video_url}
           >
             <LinearGradient
               colors={[perfume.aura_color, perfume.aura_color + '80']}
@@ -222,6 +272,7 @@ export default function ARExperienceScreen() {
             >
               {isPlaying ? (
                 <>
+                  <Pause size={24} color="#FFF" />
                   <Text style={styles.playText}>Stop Experience</Text>
                 </>
               ) : (
@@ -259,16 +310,6 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 24,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
@@ -283,7 +324,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
@@ -298,6 +339,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  videoWrapper: {
+    width: 265,
+    height: 400,
+    borderRadius: 20,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  video: { width: '100%', height: '100%' },
+  videoBorder: { ...StyleSheet.absoluteFillObject, borderWidth: 1, borderRadius: 20, opacity: 0.5 },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 24,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   arContainer: {
     flex: 1,
     alignItems: 'center',
@@ -305,16 +372,18 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   perfumeContainer: {
-    width: 280,
-    height: 280,
+    width: 2,
+    height: 2,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   perfumeImage: {
-    width: 120,
-    height: 120,
+    width: 140,
+    height: 140,
     zIndex: 5,
+    borderRadius: 70,
+    borderWidth: 1,
   },
   auraRing1: {
     position: 'absolute',

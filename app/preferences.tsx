@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +19,7 @@ export default function PreferencesScreen() {
   const router = useRouter();
   const { persona, selectedNotes, setSelectedNotes } = useJourney();
   const [allNotes, setAllNotes] = useState<ScentNote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>(
     selectedNotes.map((n) => n.id)
   );
@@ -41,17 +43,23 @@ export default function PreferencesScreen() {
   const fetchNotes = async () => {
     try {
       const data = await getNotes();
-      setAllNotes(data);
+      const normalizedNotes = data.map((note: any) => ({
+        ...note,
+        id: note._id || note.id,
+      }));
+      setAllNotes(normalizedNotes);
     } catch (err) {
       console.error('Failed to load notes', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleNote = (note: ScentNote) => {
+  const toggleNote = (noteId: string) => {
     setSelected((prev) =>
-      prev.includes(note.id)
-        ? prev.filter((id) => id !== note.id)
-        : [...prev, note.id]
+      prev.includes(noteId)
+        ? prev.filter((id) => id !== noteId)
+        : [...prev, noteId]
     );
   };
 
@@ -78,6 +86,8 @@ export default function PreferencesScreen() {
     return colors[category as keyof typeof colors] || '#FF6B9D';
   };
 
+  const themeColor = '#00CED1';
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -96,7 +106,7 @@ export default function PreferencesScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Droplet size={40} color="#00CED1" />
+            <Droplet size={40} color={themeColor} />
             <Text style={styles.title}>Build Your Scent DNA</Text>
             <Text style={styles.subtitle}>
               Select the notes that call to your soul
@@ -104,122 +114,117 @@ export default function PreferencesScreen() {
           </View>
 
           <View style={styles.selectedCount}>
-            <Text style={styles.countText}>
-              {selected.length} {selected.length === 1 ? 'note' : 'notes'}{' '}
-              selected
+            <Text style={[styles.countText, { color: themeColor }]}>
+              {selected.length} {selected.length === 1 ? 'note' : 'notes'} selected
             </Text>
           </View>
 
-          {Object.entries(groupedNotes).map(([category, notes]) => (
-            <View key={category} style={styles.categorySection}>
-              <View style={styles.categoryHeader}>
-                <View
-                  style={[
-                    styles.categoryBadge,
-                    { backgroundColor: getCategoryColor(category) + '30' },
-                  ]}
-                >
-                  <Text
+          {loading ? (
+            <ActivityIndicator size="large" color={themeColor} style={{ marginTop: 40 }} />
+          ) : (
+            Object.entries(groupedNotes).map(([category, notes]) => (
+              <View key={category} style={styles.categorySection}>
+                <View style={styles.categoryHeader}>
+                  <View
                     style={[
-                      styles.categoryText,
-                      { color: getCategoryColor(category) },
+                      styles.categoryBadge,
+                      { backgroundColor: getCategoryColor(category) + '30' },
                     ]}
                   >
-                    {category.toUpperCase()} NOTES
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.notesGrid}>
-                {notes.map((note) => {
-                  const isSelected = selected.includes(note.id);
-                  return (
-                    <TouchableOpacity
-                      key={note.id}
+                    <Text
                       style={[
-                        styles.noteCard,
-                        isSelected && styles.noteCardSelected,
+                        styles.categoryText,
+                        { color: getCategoryColor(category) },
                       ]}
-                      onPress={() => toggleNote(note)}
-                      activeOpacity={0.7}
                     >
-                      <LinearGradient
-                        colors={
-                          isSelected
-                            ? [
-                                getCategoryColor(category) + '40',
-                                getCategoryColor(category) + '20',
-                              ]
-                            : ['#1A1A2E', '#2A2A3E']
-                        }
-                        style={styles.noteGradient}
+                      {category.toUpperCase()} NOTES
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.notesGrid}>
+                  {notes.map((note) => {
+                    const isSelected = selected.includes(note.id);
+                    const color = getCategoryColor(category);
+
+                    return (
+                      <TouchableOpacity
+                        key={note.id}
+                        style={[
+                          styles.noteCard,
+                          isSelected && { borderColor: color, borderWidth: 2 },
+                        ]}
+                        onPress={() => toggleNote(note.id)}
+                        activeOpacity={0.7}
                       >
-                        {isSelected && (
-                          <View
+                        <LinearGradient
+                          colors={
+                            isSelected
+                              ? [color + '40', color + '10']
+                              : ['#2A2A3E', '#1A1A2E']
+                          }
+                          style={styles.noteGradient}
+                        >
+                          {isSelected && (
+                            <View style={[styles.checkmark, { backgroundColor: color }]}>
+                              <Text style={styles.checkmarkText}>✓</Text>
+                            </View>
+                          )}
+                          <Text
                             style={[
-                              styles.checkmark,
-                              {
-                                backgroundColor: getCategoryColor(category),
-                              },
+                              styles.noteName,
+                              isSelected && { color: color },
                             ]}
                           >
-                            <Text style={styles.checkmarkText}>✓</Text>
-                          </View>
-                        )}
-                        <Text
-                          style={[
-                            styles.noteName,
-                            isSelected && {
-                              color: getCategoryColor(category),
-                            },
-                          ]}
-                        >
-                          {note.name}
-                        </Text>
-                        <Text style={styles.noteDescription}>
-                          {note.description}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  );
-                })}
+                            {note.name}
+                          </Text>
+                          <Text style={styles.noteDescription} numberOfLines={2}>
+                            {note.description}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
 
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              selected.length === 0 && styles.continueButtonDisabled,
-            ]}
-            onPress={handleContinue}
-            disabled={selected.length === 0}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={
-                selected.length === 0
-                  ? ['#2A2A3E', '#1A1A2E']
-                  : ['#00CED1', '#00B4D8']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.continueGradient}
+          {!loading && (
+            <TouchableOpacity
+              style={[
+                styles.continueButton,
+                selected.length === 0 && styles.continueButtonDisabled,
+              ]}
+              onPress={handleContinue}
+              disabled={selected.length === 0}
+              activeOpacity={0.8}
             >
-              <Text
-                style={[
-                  styles.continueText,
-                  selected.length === 0 && styles.continueTextDisabled,
-                ]}
+              <LinearGradient
+                colors={
+                  selected.length === 0
+                    ? ['#2A2A3E', '#1A1A2E']
+                    : [themeColor, '#00B4D8']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.continueGradient}
               >
-                Discover Your Matches
-              </Text>
-              <ArrowRight
-                size={24}
-                color={selected.length === 0 ? '#666' : '#FFF'}
-              />
-            </LinearGradient>
-          </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.continueText,
+                    selected.length === 0 && styles.continueTextDisabled,
+                  ]}
+                >
+                  Discover Your Matches
+                </Text>
+                <ArrowRight
+                  size={24}
+                  color={selected.length === 0 ? '#666' : '#FFF'}
+                />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </LinearGradient>
     </View>
@@ -298,9 +303,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   notesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   noteCard: {
+    width: '48%',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 2,

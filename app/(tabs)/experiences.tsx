@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,9 @@ export default function ExperiencesScreen() {
   const router = useRouter();
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [listYPosition, setListYPosition] = useState(0);
+
   useEffect(() => {
     fetchPerfumes();
   }, []);
@@ -34,13 +38,20 @@ export default function ExperiencesScreen() {
   // };
 
   const fetchPerfumes = async () => {
-  try {
-    const data = await getPerfumes();
-    setPerfumes(data);
-  } catch (error) {
-    console.error('Error fetching perfumes:', error);
-  }
-};
+    try {
+      const data = await getPerfumes();
+      setPerfumes(data);
+    } catch (error) {
+      console.error('Error fetching perfumes:', error);
+    }
+  };
+
+  const scrollToFragrances = () => {
+    scrollViewRef.current?.scrollTo({
+      y: listYPosition,
+      animated: true,
+    });
+  };
 
 
   return (
@@ -50,6 +61,7 @@ export default function ExperiencesScreen() {
         style={styles.gradient}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -63,7 +75,11 @@ export default function ExperiencesScreen() {
           </View>
 
           <View style={styles.experienceTypes}>
-            <View style={styles.typeCard}>
+            <TouchableOpacity
+              style={styles.typeCard}
+              onPress={scrollToFragrances}
+              activeOpacity={0.8}
+            >
               <LinearGradient
                 colors={['#FF6B9D40', '#FF6B9D20']}
                 style={styles.typeGradient}
@@ -74,9 +90,13 @@ export default function ExperiencesScreen() {
                   See the emotional essence radiating from each perfume
                 </Text>
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.typeCard}>
+            <TouchableOpacity
+              style={styles.typeCard}
+              onPress={scrollToFragrances}
+              activeOpacity={0.8}
+            >
               <LinearGradient
                 colors={['#00CED140', '#00CED120']}
                 style={styles.typeGradient}
@@ -87,10 +107,18 @@ export default function ExperiencesScreen() {
                   Step into immersive mood environments for every fragrance
                 </Text>
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Explore All Fragrances</Text>
+          <Text
+            style={styles.sectionTitle}
+            onLayout={(event: LayoutChangeEvent) => {
+              const layout = event.nativeEvent.layout;
+              setListYPosition(layout.y);
+            }}
+          >
+            Explore All Fragrances
+          </Text>
 
           <View style={styles.perfumeGrid}>
             {perfumes.map((perfume) => (
@@ -98,7 +126,7 @@ export default function ExperiencesScreen() {
                 key={perfume.id}
                 style={styles.perfumeCard}
                 activeOpacity={0.9}
-                onPress={() => {}}
+                onPress={() => { }}
               >
                 <View style={styles.imageContainer}>
                   {perfume.image_url && (

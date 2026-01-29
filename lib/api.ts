@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Meta data
+// ---------Meta data------------
 export async function getMoods() {
   const res = await fetch(`${API_BASE_URL}/moods`);
   if (!res.ok) throw new Error('Failed to fetch moods');
@@ -44,7 +44,7 @@ export async function getPerfumeById(id: string) {
 export async function getRecommendations(payload: {
   moodId: string;
   personaId: string;
-  selectedNoteIds: string[];
+  noteIds: string[];
 }) {
   const res = await fetch(`${API_BASE_URL}/recommendations`, {
     method: 'POST',
@@ -53,5 +53,19 @@ export async function getRecommendations(payload: {
   });
 
   if (!res.ok) throw new Error('Failed to get recommendations');
+  return res.json();
+}
+
+// ----------- Analyse Mood -----------
+export async function analyzeMood(scores: { [key: string]: number }) {
+  const res = await fetch(`${API_BASE_URL}/analyze-mood`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ scores }),
+  });
+
+  if (!res.ok) throw new Error('Failed to analyze mood');
   return res.json();
 }
