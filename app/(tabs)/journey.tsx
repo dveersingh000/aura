@@ -1,12 +1,27 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Sparkles, Heart, User, Droplet, Award } from 'lucide-react-native';
+import { Sparkles, Heart, User, Droplet, Award, RefreshCw } from 'lucide-react-native';
 import { useJourney } from '@/context/JourneyContext';
 
 export default function JourneyScreen() {
   const router = useRouter();
-  const { mood, persona, selectedNotes, recommendations } = useJourney();
+  const { mood, persona, selectedNotes, recommendations, resetJourney } = useJourney();
+
+  const handleReset = () => {
+    Alert.alert(
+      "Reset Journey",
+      "Are you sure you want to start over? Your progress will be lost.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: () => resetJourney()
+        }
+      ]
+    );
+  };
 
   const journeySteps = [
     {
@@ -57,102 +72,111 @@ export default function JourneyScreen() {
         style={styles.gradient}
       >
         <ScrollView
-                  style={styles.scrollView}
-                  contentContainerStyle={styles.scrollContent}
-                  showsVerticalScrollIndicator={false}
-                >
-        <View style={styles.header}>
-          <Sparkles size={32} color="#FF6B9D" />
-          <Text style={styles.title}>Your Fragrance Journey</Text>
-          <Text style={styles.subtitle}>
-            Let emotions guide you to the perfect scent
-          </Text>
-        </View>
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <View style={styles.headerTopRow}>
+              <Sparkles size={32} color="#FF6B9D" />
 
-        <View style={styles.stepsContainer}>
-          {journeySteps.map((step, index) => {
-            const Icon = step.icon;
-            const isDisabled = step.disabled;
+              {(mood || persona) && (
+                <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
+                  <RefreshCw size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
 
-            return (
-              <TouchableOpacity
-                key={step.id}
-                style={[
-                  styles.stepCard,
-                  isDisabled && styles.stepCardDisabled,
-                ]}
-                onPress={() => !isDisabled && router.push(step.route as any)}
-                disabled={isDisabled}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={
-                    isDisabled
-                      ? ['#1A1A2E', '#1A1A2E']
-                      : step.completed
-                        ? [step.color + '40', step.color + '20']
-                        : ['#1A1A2E', '#2A2A3E']
-                  }
-                  style={styles.stepGradient}
+            <Text style={styles.title}>Your Fragrance Journey</Text>
+            <Text style={styles.subtitle}>
+              Let emotions guide you to the perfect scent
+            </Text>
+          </View>
+
+          <View style={styles.stepsContainer}>
+            {journeySteps.map((step, index) => {
+              const Icon = step.icon;
+              const isDisabled = step.disabled;
+
+              return (
+                <TouchableOpacity
+                  key={step.id}
+                  style={[
+                    styles.stepCard,
+                    isDisabled && styles.stepCardDisabled,
+                  ]}
+                  onPress={() => !isDisabled && router.push(step.route as any)}
+                  disabled={isDisabled}
+                  activeOpacity={0.8}
                 >
-                  <View style={styles.stepHeader}>
-                    <View
-                      style={[
-                        styles.stepNumber,
-                        { backgroundColor: step.color + '30' },
-                        isDisabled && styles.stepNumberDisabled,
-                      ]}
-                    >
-                      <Text
+                  <LinearGradient
+                    colors={
+                      isDisabled
+                        ? ['#1A1A2E', '#1A1A2E']
+                        : step.completed
+                          ? [step.color + '40', step.color + '20']
+                          : ['#1A1A2E', '#2A2A3E']
+                    }
+                    style={styles.stepGradient}
+                  >
+                    <View style={styles.stepHeader}>
+                      <View
                         style={[
-                          styles.stepNumberText,
-                          { color: step.color },
-                          isDisabled && styles.stepNumberTextDisabled,
+                          styles.stepNumber,
+                          { backgroundColor: step.color + '30' },
+                          isDisabled && styles.stepNumberDisabled,
                         ]}
                       >
-                        {index + 1}
-                      </Text>
-                    </View>
-                    {step.completed && (
-                      <View style={styles.completedBadge}>
-                        <Text style={styles.completedText}>✓</Text>
+                        <Text
+                          style={[
+                            styles.stepNumberText,
+                            { color: step.color },
+                            isDisabled && styles.stepNumberTextDisabled,
+                          ]}
+                        >
+                          {index + 1}
+                        </Text>
                       </View>
+                      {step.completed && (
+                        <View style={styles.completedBadge}>
+                          <Text style={styles.completedText}>✓</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.stepIcon}>
+                      <Icon
+                        size={48}
+                        color={isDisabled ? '#444' : step.color}
+                        strokeWidth={1.5}
+                      />
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.stepTitle,
+                        isDisabled && styles.stepTitleDisabled,
+                      ]}
+                    >
+                      {step.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.stepDescription,
+                        isDisabled && styles.stepDescriptionDisabled,
+                      ]}
+                    >
+                      {step.description}
+                    </Text>
+
+                    {isDisabled && (
+                      <Text style={styles.lockedText}>Complete previous step</Text>
                     )}
-                  </View>
-
-                  <View style={styles.stepIcon}>
-                    <Icon
-                      size={48}
-                      color={isDisabled ? '#444' : step.color}
-                      strokeWidth={1.5}
-                    />
-                  </View>
-
-                  <Text
-                    style={[
-                      styles.stepTitle,
-                      isDisabled && styles.stepTitleDisabled,
-                    ]}
-                  >
-                    {step.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.stepDescription,
-                      isDisabled && styles.stepDescriptionDisabled,
-                    ]}
-                  >
-                    {step.description}
-                  </Text>
-
-                  {isDisabled && (
-                    <Text style={styles.lockedText}>Complete previous step</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </ScrollView>
       </LinearGradient>
     </View>
@@ -179,12 +203,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  headerTopRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 16
+  },
+  resetButton: {
+    position: 'absolute',
+    right: 0,
+    padding: 8,
+  },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: '#FFF',
-    marginTop: 16,
+    marginTop: 0,
     letterSpacing: 1,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,

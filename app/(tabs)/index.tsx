@@ -114,7 +114,7 @@ export default function HomeScreen() {
                   key={perfume.id}
                   style={styles.perfumeCard}
                   activeOpacity={0.9}
-                  onPress={() => { }}
+                  onPress={() => router.push(`/product-details?id=${perfume.id}`)}
                 >
                   <View style={styles.imageContainer}>
                     {perfume.image_url && (

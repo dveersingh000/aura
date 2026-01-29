@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,19 +24,22 @@ export default function PersonaScreen() {
 
   if (!mood || !persona) return null;
 
-  const getPersonaColor = (personaName: string) => {
-    const colors: { [key: string]: string } = {
-      'The Romantic': '#FFB6C1',
-      'The Free Spirit': '#00CED1',
-      'The Sophisticated': '#8B4789',
-      'The Adventurer': '#DC143C',
-      'The Minimalist': '#F0F3FF',
-      'The Bold Visionary': '#FFA500',
-    };
-    return colors[personaName] || '#FF6B9D';
-  };
+  // Use the color from the detected mood, or a safe default
+  const themeColor = mood.color || '#FF6B9D';
 
-  const personaColor = getPersonaColor(persona.name);
+  // const getPersonaColor = (personaName: string) => {
+  //   const colors: { [key: string]: string } = {
+  //     'The Romantic': '#FFB6C1',
+  //     'The Free Spirit': '#00CED1',
+  //     'The Sophisticated': '#8B4789',
+  //     'The Adventurer': '#DC143C',
+  //     'The Minimalist': '#F0F3FF',
+  //     'The Bold Visionary': '#FFA500',
+  //   };
+  //   return colors[personaName] || '#FF6B9D';
+  // };
+
+  // const personaColor = getPersonaColor(persona.name);
 
   return (
     <View style={styles.container}>
@@ -58,29 +62,38 @@ export default function PersonaScreen() {
             <View
               style={[
                 styles.moodBadge,
-                { backgroundColor: mood.color + '40', borderColor: mood.color },
+                { backgroundColor: themeColor + '20', borderColor: themeColor },
               ]}
             >
-              <Text style={[styles.moodText, { color: mood.color }]}>
-                {mood.name}
+              <Text style={[styles.moodText, { color: themeColor }]}>
+                {mood.name} Aura
               </Text>
             </View>
           </View>
 
           <View style={styles.personaCircle}>
             <LinearGradient
-              colors={[personaColor + '60', personaColor + '20']}
+              colors={[themeColor + '60', themeColor + '10']}
               style={styles.personaGradient}
             >
-              <Sparkles size={64} color={personaColor} strokeWidth={1.5} />
+              {persona.image_url ? (
+                <Image
+                  source={{ uri: persona.image_url }}
+                  style={styles.personaImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Sparkles size={64} color={themeColor} strokeWidth={1.5} />
+              )}
             </LinearGradient>
+
             <View
-              style={[styles.glow, { backgroundColor: personaColor }]}
+              style={[styles.glow, { backgroundColor: themeColor }]}
             />
           </View>
 
           <Text style={styles.title}>You are</Text>
-          <Text style={[styles.personaName, { color: personaColor }]}>
+          <Text style={[styles.personaName, { color: themeColor }]}>
             {persona.name}
           </Text>
 
@@ -94,10 +107,10 @@ export default function PersonaScreen() {
                   key={index}
                   style={[
                     styles.traitBadge,
-                    { backgroundColor: personaColor + '20' },
+                    { backgroundColor: themeColor + '15', borderColor: themeColor + '30', borderWidth: 1 },
                   ]}
                 >
-                  <Text style={[styles.traitText, { color: personaColor }]}>
+                  <Text style={[styles.traitText, { color: themeColor }]}>
                     {trait}
                   </Text>
                 </View>
@@ -106,7 +119,7 @@ export default function PersonaScreen() {
           </View>
 
           <View style={styles.insightBox}>
-            <Text style={styles.insightTitle}>Fragrance Insight</Text>
+            <Text style={[styles.insightTitle, { color: themeColor }]}>Fragrance Insight</Text>
             <Text style={styles.insightText}>
               As {persona.name}, you're drawn to scents that express your
               unique emotional landscape. Your fragrance should feel like an
@@ -121,7 +134,7 @@ export default function PersonaScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={[personaColor, personaColor + '80']}
+              colors={[themeColor, themeColor + 'CC']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.continueGradient}
@@ -153,6 +166,8 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
   },
   content: {
     paddingHorizontal: 24,
@@ -181,6 +196,8 @@ const styles = StyleSheet.create({
     height: 200,
     marginBottom: 32,
     position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   personaGradient: {
     width: '100%',
@@ -190,6 +207,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+    zIndex: 2,
+  },
+  personaImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.9,
   },
   glow: {
     position: 'absolute',

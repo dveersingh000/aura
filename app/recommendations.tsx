@@ -7,11 +7,11 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Award, Eye, Sparkles } from 'lucide-react-native';
-// import { supabase } from '@/lib/supabase';
+import { X, Award, Eye, Sparkles, RefreshCw } from 'lucide-react-native';
 import { getRecommendations } from '@/lib/api';
 import { Perfume } from '@/types/database';
 import { useJourney } from '@/context/JourneyContext';
@@ -20,84 +20,37 @@ const { width } = Dimensions.get('window');
 
 export default function RecommendationsScreen() {
   const router = useRouter();
-  const { mood, persona, selectedNotes, setRecommendations } = useJourney();
+  const { mood, persona, selectedNotes, setRecommendations, resetJourney } = useJourney();
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!mood || !persona || selectedNotes.length === 0) {
-      router.replace('/journey');
+      // router.replace('/journey'); 
+      setLoading(false);
       return;
     }
     fetchRecommendations();
   }, [mood, persona, selectedNotes]);
 
-  // const fetchRecommendations = async () => {
-  //   try {
-  //     const { data: perfumesByMood } = await supabase
-  //       .from('perfume_moods')
-  //       .select('perfume_id, strength')
-  //       .eq('mood_id', mood!.id)
-  //       .gte('strength', 6);
-
-  //     const { data: perfumesByPersona } = await supabase
-  //       .from('perfume_personas')
-  //       .select('perfume_id, match_score')
-  //       .eq('persona_id', persona!.id)
-  //       .gte('match_score', 7);
-
-  //     const { data: perfumesByNotes } = await supabase
-  //       .from('perfume_notes')
-  //       .select('perfume_id, prominence')
-  //       .in(
-  //         'note_id',
-  //         selectedNotes.map((n) => n.id)
-  //       )
-  //       .gte('prominence', 6);
-
-  //     const moodPerfumeIds = perfumesByMood?.map((p) => p.perfume_id) || [];
-  //     const personaPerfumeIds =
-  //       perfumesByPersona?.map((p) => p.perfume_id) || [];
-  //     const notePerfumeIds = perfumesByNotes?.map((p) => p.perfume_id) || [];
-
-  //     const allIds = [...moodPerfumeIds, ...personaPerfumeIds, ...notePerfumeIds];
-  //     const idCounts: { [key: string]: number } = {};
-  //     allIds.forEach((id) => {
-  //       idCounts[id] = (idCounts[id] || 0) + 1;
-  //     });
-
-  //     const rankedIds = Object.entries(idCounts)
-  //       .sort(([, a], [, b]) => b - a)
-  //       .map(([id]) => id)
-  //       .slice(0, 6);
-
-  //     if (rankedIds.length > 0) {
-  //       const { data: matchedPerfumes } = await supabase
-  //         .from('perfumes')
-  //         .select('*')
-  //         .in('id', rankedIds);
-
-  //       if (matchedPerfumes) {
-  //         const sorted = rankedIds
-  //           .map((id) => matchedPerfumes.find((p) => p.id === id))
-  //           .filter((p): p is Perfume => p !== undefined);
-
-  //         setPerfumes(sorted);
-  //         setRecommendations(sorted);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching recommendations:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
   const fetchRecommendations = async () => {
     try {
+      setLoading(true);
+
+      const moodId = (mood as any)?._id || mood?.id;
+      const personaId = (persona as any)?._id || persona?.id;
+
+      const noteIds = selectedNotes.map((n) => (n as any)._id || n.id);
+
+      if (!moodId || !personaId) {
+        console.error("Missing IDs:", { moodId, personaId });
+        return;
+      }
+
       const data = await getRecommendations({
-        moodId: mood!.id,
-        personaId: persona!.id,
-        selectedNoteIds: selectedNotes.map((n) => n.id),
+        moodId,
+        personaId,
+        noteIds,
       });
 
       setPerfumes(data);
@@ -109,6 +62,10 @@ export default function RecommendationsScreen() {
     }
   };
 
+  const handleRetake = () => {
+    resetJourney();
+    router.push('/journey');
+  };
 
   return (
     <View style={styles.container}>
@@ -118,7 +75,7 @@ export default function RecommendationsScreen() {
       >
         <TouchableOpacity
           style={styles.closeButton}
-          onPress={() => router.back()}
+          onPress={() => router.push('/journey')}
         >
           <X size={28} color="#FFF" />
         </TouchableOpacity>
@@ -138,14 +95,14 @@ export default function RecommendationsScreen() {
           <View style={styles.journeyRecap}>
             <View style={styles.recapItem}>
               <Text style={styles.recapLabel}>Mood</Text>
-              <Text style={[styles.recapValue, { color: mood?.color }]}>
+              <Text style={[styles.recapValue, { color: mood?.color || '#FFF' }]}>
                 {mood?.name}
               </Text>
             </View>
             <View style={styles.recapDivider} />
             <View style={styles.recapItem}>
               <Text style={styles.recapLabel}>Persona</Text>
-              <Text style={styles.recapValue}>{persona?.name}</Text>
+              <Text style={styles.recapValue}>{persona?.name?.split(' ')[1] || 'You'}</Text>
             </View>
             <View style={styles.recapDivider} />
             <View style={styles.recapItem}>
@@ -155,21 +112,29 @@ export default function RecommendationsScreen() {
           </View>
 
           {loading ? (
-            <Text style={styles.loadingText}>Finding your matches...</Text>
+            <View style={{ marginTop: 60, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#FF6B9D" />
+              <Text style={styles.loadingText}>Analyzing your Scent DNA...</Text>
+            </View>
           ) : perfumes.length === 0 ? (
-            <Text style={styles.noResults}>
-              No matches found. Try adjusting your preferences.
-            </Text>
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Text style={styles.noResults}>
+                No matches found. Try adjusting your preferences.
+              </Text>
+              <TouchableOpacity onPress={handleRetake} style={styles.retryButton}>
+                <Text style={styles.retryText}>Retake Journey</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
               <Text style={styles.sectionTitle}>Recommended For You</Text>
               <View style={styles.perfumesContainer}>
                 {perfumes.map((perfume, index) => (
                   <TouchableOpacity
-                    key={perfume.id}
+                    key={perfume.id || (perfume as any)._id}
                     style={styles.perfumeCard}
                     activeOpacity={0.9}
-                    onPress={() => { }}
+                    onPress={() => router.push(`/product-details?id=${perfume.id || (perfume as any)._id}`)}
                   >
                     <View style={styles.rankBadge}>
                       <Text style={styles.rankText}>#{index + 1}</Text>
@@ -198,7 +163,7 @@ export default function RecommendationsScreen() {
 
                       <View style={styles.emotionalImpact}>
                         <Sparkles size={16} color="#FF6B9D" />
-                        <Text style={styles.impactText}>
+                        <Text style={styles.impactText} numberOfLines={2}>
                           {perfume.emotional_impact}
                         </Text>
                       </View>
@@ -208,7 +173,7 @@ export default function RecommendationsScreen() {
                         onPress={() =>
                           router.push({
                             pathname: '/ar-experience',
-                            params: { perfumeId: perfume.id },
+                            params: { perfumeId: perfume.id || (perfume as any)._id },
                           } as any)
                         }
                       >
@@ -228,6 +193,11 @@ export default function RecommendationsScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              <TouchableOpacity style={styles.retakeLink} onPress={handleRetake}>
+                <RefreshCw size={16} color="#666" style={{ marginRight: 8 }} />
+                <Text style={styles.retakeText}>Start New Journey</Text>
+              </TouchableOpacity>
             </>
           )}
         </ScrollView>
@@ -269,6 +239,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginTop: 16,
     letterSpacing: 1,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
@@ -310,13 +281,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     textAlign: 'center',
-    marginTop: 40,
+    marginTop: 20,
   },
   noResults: {
     fontSize: 16,
     color: '#999',
     textAlign: 'center',
-    marginTop: 40,
+    marginBottom: 20,
+  },
+  retryButton: {
+    padding: 12,
+    backgroundColor: '#2A2A3E',
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#FFF',
+    fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 22,
@@ -429,5 +409,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 50,
+  },
+  retakeLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 32,
+    marginBottom: 20,
+    opacity: 0.7,
+  },
+  retakeText: {
+    color: '#666',
+    fontSize: 14,
   },
 });
